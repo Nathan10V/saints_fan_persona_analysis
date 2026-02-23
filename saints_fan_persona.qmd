@@ -1,5 +1,208 @@
 ---
-title: "saints_fan_persona"
-format: html
+title: "Saints Fan Persona Analysis"
+subtitle: "Neighborhood Intelligence & Sponsorship Alignment"
+author: "Nathan Vernon"
+format: 
+  html:
+    theme: flatly
+    mainfont: "Century Gothic"
+    toc: true
+    code-fold: true
+    echo: false
+    self-contained: true
 ---
 
+# **Executive Summary**
+
+This analysis identifies the demographic and economic drivers of Saints fan loyalty. By merging primary survey data with U.S. Census Bureau American Community Survey (ACS) metrics, we move beyond stated fan preferences to understand the geographic and economic context of the Saints' fanbase. This report specifically examines how neighborhood-level wealth and age correlate with fan passion and brand recall.
+
+```{r}
+#| label: data-engineering
+#| message: false
+
+# Load in all necessary libraries and fonts
+windowsFonts(`Century Gothic` = windowsFont("Century Gothic"))
+library(tidyverse)
+
+
+
+# Load the joined data
+df <- read_csv("data/saints_with_census.csv")
+
+# We calculate the row-wise mean of the four passion variables
+df_cleaned <- df %>%
+  mutate(Passion_Score = (p1 + p2 + p3 + p4) / 4) %>%
+  # Filter out any respondents who didn't answer these questions
+  filter(!is.na(Passion_Score))
+
+# Quick check to see the first 5 rows of our new metric
+head(df_cleaned %>% select(p1, p2, p3, p4, Passion_Score))
+```
+
+## Exploratory Data Analysis
+
+Exploratory data analysis began with the production of univariate plots to provide an initial understanding of the fanbase.
+
+### Response Variable: Fan Passion
+
+The primary response variable of interest is overall Fan Passion. Because passion is multifaceted, this metric was calculated as an aggregated index (0-100) using four distinct survey questions regarding fan loyalty and engagement.
+
+As illustrated in Figure 1, the distribution of passion values follows a left-skewed pattern. Most observations fall around 95, indicating that the Saints fan base in this sample are very passionate.
+
+```{r}
+#| label: response-variable-eda
+#| fig-cap: "Figure 1: Distribution of Calculated Fan Passion Scores"
+
+ggplot(df_cleaned, aes(x = Passion_Score)) +
+  geom_density(fill = "#C2B067", color = "black", alpha = 0.6) + # Saints Gold
+  labs(
+    title = "Response Variable: Fan Passion",
+    subtitle = "Aggregated index calculated from survey variables P1-P4",
+    x = "Passion Score (0-100)",
+    y = "Density",
+  ) +
+  theme_minimal(base_family = "Century Gothic") +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.major.x = element_blank()
+  
+  )
+```
+
+### Predictor: Neighborhood Economics
+
+To understand the geographic context of the fanbase, we analyzed the relationship between a fan's stated passion and the median household income of their ZIP Code Tabulation Area (ZCTA) using U.S. Census Bureau ACS data.
+
+When compared with overall passion, the neighborhood income variable demonstrates a statistically flat relationship with a slight negative trend (Figure 2). This suggests that Saints fan passion transcends economic boundaries, and that the most deeply engaged fans are slightly more concentrated in middle-to-lower-income neighborhoods.
+
+```{r}
+#| label: income-passion-bivariate
+#| fig-cap: "Figure 2: Relationship between Neighborhood Income and Fan Passion"
+#| echo: false
+#| message: false
+#| warning: false
+
+# 1. Calculate the correlation (r) dynamically, ignoring NAs
+correlation <- cor(df_cleaned$neighborhood_income, df_cleaned$Passion_Score, use = "complete.obs")
+# Create a clean text label for the plot
+cor_label <- paste0("Correlation (r) = ", round(correlation, 3))
+
+# 2. Build the plot (filtering out the Census NAs so you don't get warnings)
+ggplot(df_cleaned %>% filter(!is.na(neighborhood_income)), aes(x = neighborhood_income, y = Passion_Score)) +
+  geom_jitter(color = "black", alpha = 0.3, size = 1.5) +
+  geom_smooth(method = "lm", color = "#C2B067", linewidth = 1.5, se = TRUE) +
+  scale_x_continuous(labels = scales::dollar_format()) +
+  labs(
+    title = "Neighborhood Wealth vs. Fan Passion",
+    caption = cor_label, # This prints your exact stat in the bottom corner!
+    x = "Median Neighborhood Income (ZCTA)",
+    y = "Passion Score (0-100)"
+  ) +
+  theme_minimal(base_family = "Century Gothic") +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    panel.grid.minor = element_blank()
+  )
+```
+
+### Predictor (Categorical): Season Ticket Holder Status
+
+For categorical predictors, distinct group-level patterns are often evaluated to understand the baseline passion required to convert a casual follower into a dedicated ticket product investor.
+
+However, when segmenting the Saints fan base by Season Ticket Holder (STH) status, the data reveals that average passion scores are nearly identical across both groups (Figure 3).
+
+This indicates a highly ubiquitous and deeply entrenched fan base. Unlike markets where passion is heavily concentrated among in-stadium attendees, Saints fan affinity remains exceptionally high regardless of financial investment in tickets. For brand partners, this means sponsorship assets outside the stadium (e.g., broadcast, digital, and retail activations) carry just as much weight and reach a highly devoted audience.
+
+```{r}
+#| label: sth-categorical-plot
+#| fig-cap: "Figure 3: Average Fan Passion by Season Ticket Holder Status"
+#| echo: false
+#| message: false
+#| warning: false
+
+# 1. Prepare the data: Calculate averages and create Ian's "(n = X)" labels
+sth_summary <- df_cleaned %>%
+  # Filter out missing STH data if any
+  filter(!is.na(sth)) %>%
+  # Convert 1/0 to readable labels 
+  mutate(sth_label = ifelse(sth == 1, "Season Ticket Holder", "Non-Ticket Holder")) %>%
+  group_by(sth_label) %>%
+  summarise(
+    avg_passion = mean(Passion_Score, na.rm = TRUE),
+    n_fans = n()
+  ) %>%
+  # Create the Wakefield-style label: "85.2 (n = 450)"
+  mutate(bar_label = paste0(round(avg_passion, 1), " (n = ", n_fans, ")"))
+
+# 2. Build the horizontal bar chart
+ggplot(sth_summary, aes(x = avg_passion, y = reorder(sth_label, avg_passion))) +
+  # Ian uses a dark gray for these categorical bars
+  geom_col(fill = "#5A5A5A", width = 0.5) + 
+  # Add the labels right outside the bars
+  geom_text(aes(label = bar_label), hjust = -0.2, family = "Century Gothic", size = 4) +
+  # Extend the x-axis slightly so the text doesn't get cut off
+  scale_x_continuous(limits = c(0, 110), breaks = seq(0, 100, 25)) +
+  labs(
+    title = "Impact of Ticket Status on Passion",
+    x = "Average Passion Score",
+    y = NULL # Hiding the Y-axis title to keep it clean like Ian's
+  ) +
+  theme_minimal(base_family = "Century Gothic") +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(), # Removes horizontal lines behind the bars
+    axis.text.y = element_text(face = "bold", size = 11)
+  )
+```
+
+### Predictor: In-Venue Attendance
+
+While baseline passion remains high across the overall fanbase, we also evaluated the impact of physical, in-venue engagement. By analyzing the total number of home games a fan attended during the season (`attend`), we can determine if repeated physical exposure to the team and its sponsors correlates with heightened team affinity.
+
+```{r}
+#| label: attendance-progression-plot
+#| fig-cap: "Figure 4: Average Fan Passion by Exact Number of Games Attended"
+#| echo: false
+#| message: false
+
+# 1. Prepare the data: Group by exact number, cap at 8+
+attend_summary <- df_cleaned %>%
+  filter(!is.na(attend)) %>%
+  # If attendance is 8 or more, make it "8+", otherwise keep the number
+  mutate(attend_grouped = ifelse(attend >= 8, "8+", as.character(attend))) %>%
+  # Lock the order from 0 to 8+ so the chart flows correctly left-to-right
+  mutate(attend_grouped = factor(attend_grouped, levels = c("0", "1", "2", "3", "4", "5", "6", "7", "8+"))) %>%
+  group_by(attend_grouped) %>%
+  summarise(
+    avg_passion = mean(Passion_Score, na.rm = TRUE),
+    n_fans = n()
+  ) %>%
+  # Create the Wakefield-style label (using \n to put the 'n' on a new line)
+  mutate(bar_label = paste0(round(avg_passion, 1), "\n(n=", n_fans, ")"))
+
+# 2. Build the vertical column chart
+ggplot(attend_summary, aes(x = attend_grouped, y = avg_passion)) +
+  # Ian's categorical dark gray
+  geom_col(fill = "#5A5A5A", width = 0.7) + 
+  # Add the labels right on top of the bars
+  geom_text(aes(label = bar_label), vjust = -0.2, family = "Century Gothic", size = 3.5) +
+  # Extend the y-axis so the text doesn't get cut off
+  scale_y_continuous(limits = c(0, 115), breaks = seq(0, 100, 25)) +
+  labs(
+    title = "Passion Progression by Games Attended",
+    x = "Number of Home Games Attended",
+    y = "Average Passion Score"
+  ) +
+  theme_minimal(base_family = "Century Gothic") +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(), # Removes vertical lines behind the bars
+    axis.text.x = element_text(face = "bold", size = 11)
+  )
+```
