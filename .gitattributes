@@ -1,0 +1,5 @@
+# Ignore the generated HTML files so they don't dominate the stats
+*.html linguist-vendored
+
+# Force GitHub  to treat Quarto (.qmd) files as R code
+*.qmd linguist-language=R
