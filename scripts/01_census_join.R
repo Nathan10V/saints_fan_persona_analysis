@@ -1,13 +1,21 @@
 library(tidyverse)
 library(tidycensus)
 
+
 #Target Variables
 target_vars <- c(
   med_income = "B19013_001",
   med_age    = "B01002_001",
-  education  = "B15003_022",
-  pop_total  = "B01003_001"
-)
+  pop_total  = "B01003_001",
+  total_households = "B11005_001", 
+  kids_households  = "B11005_002",
+  total_pop_25     = "B15003_001",     
+  bachelors        = "B15003_022",        
+  masters          = "B15003_023",          
+  prof_degree      = "B15003_024",      
+  doctorate        = "B15003_025"
+  )
+
 # 'Median Household Income' (B19013_001) for 2022
 census_data <- get_acs(
   geography = "zcta", 
@@ -15,11 +23,22 @@ census_data <- get_acs(
   year = 2022,
   output ="wide"
 ) |> 
+  mutate(
+    med_incomeE = med_incomeE,
+    med_ageE    = med_ageE,
+    educationE  = (bachelorsE + mastersE + prof_degreeE + doctorateE) / total_pop_25E,
+    pop_totalE  = pop_totalE
+  ) |>
+  mutate(pct_kids = kids_householdsE / total_householdsE,
+         pct_college = (bachelorsE + mastersE + prof_degreeE + doctorateE) / total_pop_25E  
+    
+  ) |> 
   select(zip = GEOID,
          neighborhood_income = med_incomeE,
          neighborhood_age    = med_ageE,
-         neighborhood_edu    = educationE,
-         neighborhood_pop    = pop_totalE
+         neighborhood_pop    = pop_totalE,
+         pct_kids,
+         pct_college,
          )
 
 # 2. Load your Saints Survey CSV
