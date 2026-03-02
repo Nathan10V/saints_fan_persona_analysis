@@ -27,18 +27,15 @@ windowsFonts(`Century Gothic` = windowsFont("Century Gothic"))
 library(tidyverse)
 
 
-
 # Load the joined data
 df <- read_csv("data/saints_with_census.csv")
 
-# We calculate the row-wise mean of the four passion variables
-df_cleaned <- df %>%
-  mutate(Passion_Score = (p1 + p2 + p3 + p4) / 4) %>%
+# Calculate passion
+df_cleaned <- df |> 
+  mutate(Passion_Score = (p1 + p2 + p3 + p4) / 4) |> 
   # Filter out any respondents who didn't answer these questions
   filter(!is.na(Passion_Score))
 
-# Quick check to see the first 5 rows of our new metric
-head(df_cleaned %>% select(p1, p2, p3, p4, Passion_Score))
 ```
 
 ## Exploratory Data Analysis
@@ -88,12 +85,12 @@ When compared with overall passion, the neighborhood income variable demonstrate
 #| message: false
 #| warning: false
 
-# 1. Calculate the correlation (r) dynamically, ignoring NAs
+# Calculate the correlation, ignoring NAs
 correlation <- cor(df_cleaned$neighborhood_income, df_cleaned$Passion_Score, use = "complete.obs")
 # Create a clean text label for the plot
 cor_label <- paste0("Correlation (r) = ", round(correlation, 3))
 
-# 2. Build the plot (filtering out the Census NAs so you don't get warnings)
+# Build the plot
 ggplot(df_cleaned |>  filter(!is.na(neighborhood_income)), aes(x = neighborhood_income, y = Passion_Score)) +
   geom_jitter(color = "black", alpha = 0.3, size = 1.5) +
   geom_smooth(method = "lm", color = "#C2B067", linewidth = 1.5, se = TRUE) +
@@ -126,7 +123,7 @@ This indicates a highly ubiquitous and deeply entrenched fan base. Unlike market
 #| message: false
 #| warning: false
 
-# 1. Prepare the data: Calculate averages and create Ian's "(n = X)" labels
+# Prepare the data
 sth_summary <- df_cleaned |> 
   # Filter out missing STH data if any
   filter(!is.na(sth)) |> 
@@ -137,27 +134,25 @@ sth_summary <- df_cleaned |>
     avg_passion = mean(Passion_Score, na.rm = TRUE),
     n_fans = n()
   ) |> 
-  # Create the Wakefield-style label: "85.2 (n = 450)"
   mutate(bar_label = paste0(round(avg_passion, 1), " (n = ", n_fans, ")"))
 
-# 2. Build the horizontal bar chart
+# Build the chart
 ggplot(sth_summary, aes(x = avg_passion, y = reorder(sth_label, avg_passion))) +
-  # Ian uses a dark gray for these categorical bars
   geom_col(fill = "#C2B067", width = 0.5) + 
-  # Add the labels right outside the bars
+  # Add the labels
   geom_text(aes(label = bar_label), hjust = -0.2, family = "Century Gothic", size = 4) +
-  # Extend the x-axis slightly so the text doesn't get cut off
+  # Extend the x-axis
   scale_x_continuous(limits = c(0, 110), breaks = seq(0, 100, 25)) +
   labs(
     title = "Impact of Ticket Status on Passion",
     x = "Average Passion Score",
-    y = NULL # Hiding the Y-axis title to keep it clean like Ian's
+    y = NULL 
   ) +
   theme_minimal(base_family = "Century Gothic") +
   theme(
     plot.title = element_text(face = "bold", size = 14),
     panel.grid.minor = element_blank(),
-    panel.grid.major.y = element_blank(), # Removes horizontal lines behind the bars
+    panel.grid.major.y = element_blank(), 
     axis.text.y = element_text(face = "bold", size = 11)
   )
 ```
@@ -172,28 +167,26 @@ While baseline passion remains high across the overall fanbase, we also evaluate
 #| echo: false
 #| message: false
 
-# 1. Prepare the data: Group by exact number, cap at 8+
+# Prepare the data: Group by exact number, cap at 8+
 attend_summary <- df_cleaned |> 
   filter(!is.na(attend)) |> 
   # If attendance is 8 or more, make it "8+", otherwise keep the number
   mutate(attend_grouped = ifelse(attend >= 8, "8+", as.character(attend))) |> 
-  # Lock the order from 0 to 8+ so the chart flows correctly left-to-right
+  # Lock the order
   mutate(attend_grouped = factor(attend_grouped, levels = c("0", "1", "2", "3", "4", "5", "6", "7", "8+"))) |> 
   group_by(attend_grouped) |> 
   summarise(
     avg_passion = mean(Passion_Score, na.rm = TRUE),
     n_fans = n()
   ) |> 
-  # Create the Wakefield-style label (using \n to put the 'n' on a new line)
   mutate(bar_label = paste0(round(avg_passion, 1), "\n(n=", n_fans, ")"))
 
-# 2. Build the vertical column chart
+# Build the vertical column chart
 ggplot(attend_summary, aes(x = attend_grouped, y = avg_passion)) +
-  # Ian's categorical dark gray
   geom_col(fill = "#C2B067", width = 0.7) + 
-  # Add the labels right on top of the bars
+  # Add the labels
   geom_text(aes(label = bar_label), vjust = -0.2, family = "Century Gothic", size = 3.5) +
-  # Extend the y-axis so the text doesn't get cut off
+  # Extend the y-axis
   scale_y_continuous(limits = c(0, 115), breaks = seq(0, 100, 25)) +
   labs(
     title = "Passion Progression by Games Attended",
@@ -220,15 +213,15 @@ To further define the demographic profile of the fanbase, I analyzed life-stage 
 #| message: false
 #| warning: false
 
-# 1. Calculate the correlation (r)
+# Calculate the correlation
 cor_kids <- cor(df_cleaned$pct_kids, df_cleaned$Passion_Score, use = "complete.obs")
 cor_label_kids <- paste0("Correlation (r) = ", round(cor_kids, 3))
 
-# 2. Build the visual
+# Build the visual
 ggplot(df_cleaned |> filter(!is.na(pct_kids)), aes(x = pct_kids, y = Passion_Score)) +
   geom_jitter(color = "black", alpha = 0.3, size = 1.5) +
   geom_smooth(method = "lm", color = "#C2B067", linewidth = 1.5, se = TRUE) +
-  # Format the X-axis as clean percentages (e.g., 25%, 50%)
+  # Format the X-axis as clean percentages
   scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
   labs(
     title = "Neighborhood Family Density vs. Fan Passion",
@@ -254,11 +247,11 @@ To evaluate the impact of educational attainment, I analyzed the relationship be
 #| message: false
 #| warning: false
 
-# 1. Calculate the correlation (r)
+# Calculate the correlation
 cor_edu <- cor(df_cleaned$pct_college, df_cleaned$Passion_Score, use = "complete.obs")
 cor_label_edu <- paste0("Correlation (r) = ", round(cor_edu, 3))
 
-# 2. Build the visual
+# Build the visual
 ggplot(df_cleaned %>% filter(!is.na(pct_college)), aes(x = pct_college, y = Passion_Score)) +
   geom_jitter(color = "black", alpha = 0.3, size = 1.5) +
   geom_smooth(method = "lm", color = "#C2B067", linewidth = 1.5, se = TRUE) +
@@ -288,7 +281,7 @@ While a continuous correlation provides directional insight, we applied an Analy
 #| message: false
 #| warning: false
 
-# 1. Prepare the Data: Create 3 equal buckets (Tertiles) for the ANOVA
+# Prepare the Data: Create 3 equal buckets for ANOVA
 df_edu <- df_cleaned |> 
   filter(!is.na(pct_college)) |> 
   mutate(
@@ -299,23 +292,23 @@ df_edu <- df_cleaned |>
       edu_tier == 2 ~ "Moderate Degree Density",
       edu_tier == 3 ~ "High Degree Density"
     ),
-    # Lock the order so the chart flows naturally left-to-right
+    # Lock the order
     edu_label = factor(edu_label, levels = c("Low Degree Density", "Moderate Degree Density", "High Degree Density"))
   )
 
-# 2. Run the ANOVA Model
+# Run the ANOVA Model
 anova_model <- aov(Passion_Score ~ edu_label, data = df_edu)
 anova_summary <- summary(anova_model)
 
-# 3. Extract the p-value to dynamically print on the chart
+# Extract the p-value to print on the chart
 p_val <- anova_summary[[1]][["Pr(>F)"]][1]
 
-# Create a clean label for the client
+# Create a clean label
 p_label <- ifelse(p_val < 0.05, 
                   paste0("ANOVA: Significant Variance (p = ", signif(p_val, 3), ")"), 
                   paste0("ANOVA: No Significant Variance (p = ", signif(p_val, 3), ")"))
 
-# 4. Summarize for the Bar Chart
+# Summarize for the Bar Chart
 edu_summary <- df_edu |> 
   group_by(edu_label) |> 
   summarise(
@@ -324,14 +317,14 @@ edu_summary <- df_edu |>
   ) |> 
   mutate(bar_label = paste0(round(avg_passion, 1), "\n(n=", n_fans, ")"))
 
-# 5. Build the Visual
+# Build the Visual
 ggplot(edu_summary, aes(x = edu_label, y = avg_passion)) +
   geom_col(fill = "#C2B067", width = 0.6) + 
   geom_text(aes(label = bar_label), vjust = -0.2, family = "Century Gothic", size = 4) +
   scale_y_continuous(limits = c(0, 115), breaks = seq(0, 100, 25)) +
   labs(
     title = "Fan Passion by Neighborhood Education Tiers",
-    caption = p_label, # This prints your exact ANOVA result in the corner!
+    caption = p_label,
     x = NULL,
     y = "Average Passion Score"
   ) +
@@ -344,7 +337,7 @@ ggplot(edu_summary, aes(x = edu_label, y = avg_passion)) +
   )
 ```
 
-## Conclusion: Variable Importance Modeling
+## Variable Importance Modeling
 
 While individual predictors provide excellent directional insight, audience demographics do not exist in a vacuum. To determine the true, independent drivers of fan affinity, we constructed a Multivariate Linear Regression model combining all major categorical and continuous variables.
 
@@ -360,14 +353,14 @@ By extracting the absolute t-statistics from the model, we can rank the relative
 library(broom)
 library(gt)
 
-# 1. Build the Multivariate Linear Regression Model
+# Build the Linear Regression Model
 final_model <- lm(Passion_Score ~ neighborhood_income + pct_college + pct_kids + sth + attend, data = df_cleaned)
 
-# 1b. Extract the R-squared value and format it as a percentage
+# Extract the R-squared value and format it as a percentage
 r2_val <- summary(final_model)$r.squared
 r2_blurb <- paste0("Model Variance (R-squared): ", round(r2_val * 100, 1), "%")
 
-# 2. Tidy the results and build the wide gt table
+# Tidy the results and build the wide gt table
 tidy(final_model) |> 
   mutate(term = case_when(
     term == "(Intercept)" ~ "Baseline Passion (Intercept)",
@@ -378,7 +371,6 @@ tidy(final_model) |>
     term == "attend" ~ "Games Attended",
     TRUE ~ term
   )) |> 
-  # Keep the t-statistic column this time instead of making it a chart
   select(term, estimate, std.error, statistic, p.value) |> 
   gt() |> 
   tab_header(
@@ -389,7 +381,7 @@ tidy(final_model) |>
     columns = c(estimate, std.error, statistic),
     decimals = 3
   ) |> 
-  fmt_number( # Make sure to keep your p.value formatting!
+  fmt_number(
     columns = p.value,
     decimals = 3
   ) |> 
@@ -400,12 +392,11 @@ tidy(final_model) |>
     statistic = "t-Statistic",
     p.value = "P-Value"
   ) |> 
-  # THE NEW FIX: Add the R-squared blurb to the bottom left corner
   tab_source_note(
     source_note = r2_blurb
   ) |> 
   tab_options(
-    table.width = pct(100), # Forces the table to stretch wide
+    table.width = pct(100),
     table.font.names = "Century Gothic",
     heading.align = "left",
     table.border.top.color = "#C2B067", 
@@ -425,10 +416,10 @@ To make these findings highly actionable, we extracted the absolute t-statistics
 #| message: false
 #| warning: false
 
-# 1. Extract the data for the chart (excluding the Intercept)
+# Extract the data for the chart
 model_results <- tidy(final_model) |> filter(term != "(Intercept)")
 
-# 2. Clean the names and grab the absolute t-statistic
+# Clean the names and grab the absolute t-statistic
 importance_df <- model_results |>
   mutate(
     Importance = abs(statistic),
@@ -442,7 +433,7 @@ importance_df <- model_results |>
     )
   )
 
-# 3. Build the standalone horizontal bar chart
+# Build the horizontal bar chart
 ggplot(importance_df, aes(x = Importance, y = reorder(Clean_Term, Importance))) +
   geom_col(fill = "#C2B067", width = 0.6) + 
   geom_text(aes(label = round(Importance, 2)), hjust = -0.2, family = "Century Gothic", size = 4) +
@@ -474,13 +465,13 @@ To ensure the mathematical integrity of our linear regression model, we calculat
 #| message: false
 #| warning: false
 
-# Load the 'car' package to calculate VIF
+# Load the package to calculate VIF
 library(car)
 
-# 1. Calculate the VIF values for your final model
+# Calculate the VIF values for your final model
 vif_values <- vif(final_model)
 
-# 2. Convert the results into a clean dataframe for plotting
+# Convert the results into a clean dataframe for plotting
 vif_df <- data.frame(
   Predictor = names(vif_values),
   VIF = as.numeric(vif_values)
@@ -496,13 +487,11 @@ vif_df <- data.frame(
     )
   )
 
-# 3. Build the horizontal bar chart
+# Build the horizontal bar chart
 ggplot(vif_df, aes(x = VIF, y = reorder(Clean_Term, VIF))) +
-  geom_col(fill = "#C2B067", width = 0.6) + # Dark gray bars
-  # Add the Saints Gold dashed cutoff lines at 5 and 10
+  geom_col(fill = "#C2B067", width = 0.6) +
   geom_vline(xintercept = 5, linetype = "dashed", color = "#C2B067", linewidth = 1) +
   geom_vline(xintercept = 10, linetype = "dashed", color = "#C2B067", linewidth = 1) +
-  # Force the X-axis to go out past 10 so we can see the lines
   scale_x_continuous(limits = c(0, 12), breaks = seq(0, 10, 2)) +
   labs(
     title = "Predictor Independence Check (VIF)",
@@ -535,9 +524,9 @@ By categorizing the continuous Census neighborhood median income into these exac
 #| message: false
 #| warning: false
 
-# 1. Map Census income to brackets AND calculate the bracket differences
-df_status <- df_cleaned %>%
-  filter(Income %in% 1:7, !is.na(neighborhood_income)) %>%
+# Map Census income to brackets and calculate the bracket differences
+df_status <- df_cleaned |> 
+  filter(Income %in% 1:7, !is.na(neighborhood_income)) |> 
   mutate(
     neigh_bracket = case_when(
       neighborhood_income < 25000 ~ 1,
@@ -555,30 +544,29 @@ df_status <- df_cleaned %>%
     ),
     financial_status = factor(financial_status, levels = c("Under-Earns Neighborhood", "Matches Neighborhood Median", "Out-Earns Neighborhood")),
     
-    # Calculate the exact difference in brackets
     bracket_diff = Income - neigh_bracket
   )
 
-# 2. Calculate the averages for the caption
-avg_out <- df_status %>% filter(financial_status == "Out-Earns Neighborhood") %>% pull(bracket_diff) %>% mean(na.rm = TRUE)
-avg_under <- df_status %>% filter(financial_status == "Under-Earns Neighborhood") %>% pull(bracket_diff) %>% mean(na.rm = TRUE)
+# Calculate the averages for the caption
+avg_out <- df_status |>  filter(financial_status == "Out-Earns Neighborhood") |>  pull(bracket_diff) |>  mean(na.rm = TRUE)
+avg_under <- df_status |>  filter(financial_status == "Under-Earns Neighborhood") |> pull(bracket_diff) |>  mean(na.rm = TRUE)
 
 # Round to 1 decimal place
 out_earn_val <- round(abs(avg_out), 1)
 under_earn_val <- round(abs(avg_under), 1)
 
-# Create the dynamic text string for the caption
+# Create the text string for the caption
 plot_caption <- paste0("Note: Fans out-earn their neighborhood median (avg. difference: +", out_earn_val, " brackets). Fans who under-earn do so by an average of -", under_earn_val, " brackets.")
 
-# 3. Summarize the proportions for the Bar Chart
-status_summary <- df_status %>%
-  count(financial_status) %>%
+# Summarize the proportions for the Bar Chart
+status_summary <- df_status |> 
+  count(financial_status) |> 
   mutate(
     pct = n / sum(n),
     pct_label = scales::percent(pct, accuracy = 1)
   )
 
-# 4. Build the visual using Saints colors and the new caption
+# Build the visual
 ggplot(status_summary, aes(x = financial_status, y = pct, fill = financial_status)) +
   geom_col(width = 0.6, show.legend = FALSE) +
   geom_text(aes(label = pct_label), vjust = -0.5, family = "Century Gothic", size = 5, fontface = "bold") +
@@ -604,9 +592,9 @@ ggplot(status_summary, aes(x = financial_status, y = pct, fill = financial_statu
   )
 ```
 
-## Conclusion: The Saints Fan Persona
+# Conclusion: The Saints Fan Persona
 
-Through a comprehensive synthesis of individual survey responses and granular U.S. Census data, this analysis reveals the demographic and behavioral profile of the die-hard New Orleans Saints fan.
+Through a comprehensive synthesis of individual survey responses and granular U.S. Census data, this analysis reveals the demographic and behavioral profile of the New Orleans Saints fans.
 
 ### Key Strategic Findings
 
