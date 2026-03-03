@@ -16,7 +16,7 @@ format:
 
 # **Executive Summary**
 
-This analysis identifies the demographic and economic drivers of Saints fan loyalty. By merging primary survey data with U.S. Census Bureau American Community Survey (ACS) metrics, we can get a more holistic view of the Saints Fandom. This report specifically examines how neighborhood-level wealth and age correlate with fan passion.
+This analysis identifies the demographic and economic drivers of Saints fan loyalty. By merging primary survey data with U.S. Census Bureau American Community Survey (ACS) metrics, we can get a more holistic view of the Saints Fandom. This report specifically examines how neighborhood-level wealth and education correlate with fan passion. The findings of the report apply to the persona of Saints fans and their relation to their neighborhoods.
 
 ```{r}
 #| label: data-engineering
@@ -49,8 +49,8 @@ The primary response variable of interest is overall Fan Passion. Because passio
 As illustrated in Figure 1, the distribution of passion values follows a left-skewed pattern. Most observations fall around 95, indicating that the Saints fan base in this sample are very passionate.
 
 ```{r}
-#| label: response-variable-eda
-#| fig-cap: "Figure 1: Distribution of Calculated Fan Passion Scores"
+#| label: fig-response-variable-eda
+#| fig-cap: "Distribution of Calculated Fan Passion Scores"
 
 ggplot(df_cleaned, aes(x = Passion_Score)) +
   geom_density(fill = "#C2B067", color = "black", alpha = 0.6) + # Saints Gold
@@ -74,16 +74,16 @@ ggplot(df_cleaned, aes(x = Passion_Score)) +
 
 ### Predictor: Neighborhood Economics
 
-To understand the geographic context of the fanbase, we analyzed the relationship between a fan's stated passion and the median household income of their ZIP Code Tabulation Area (ZCTA) using U.S. Census Bureau ACS data.
+To understand the geographic context of the fanbase, I analyzed the relationship between a fan's stated passion and the median household income of their ZIP Code Tabulation Area (ZCTA) using U.S. Census Bureau ACS data.
 
-When compared with overall passion, the neighborhood income variable demonstrates a statistically flat relationship with a slight negative trend (Figure 2). This suggests that Saints fan passion transcends economic boundaries, and that the most deeply engaged fans are slightly more concentrated in middle-to-lower-income neighborhoods.
+When compared with overall passion, the neighborhood income variable demonstrates a statistically flat relationship with a slight negative trend (Figure 2). This suggests that Saints fan passion move beyond economic boundaries, and that the most deeply engaged fans are slightly more concentrated in middle-to-lower-income neighborhoods.
 
 ```{r}
-#| label: income-passion-bivariate
-#| fig-cap: "Figure 2: Relationship between Neighborhood Income and Fan Passion"
+#| label: fig-income-passion-bivariate
 #| echo: false
 #| message: false
 #| warning: false
+#| fig-cap: "Relationship between Neighborhood Income and Fan Passion"
 
 # Calculate the correlation, ignoring NAs
 correlation <- cor(df_cleaned$neighborhood_income, df_cleaned$Passion_Score, use = "complete.obs")
@@ -110,11 +110,9 @@ ggplot(df_cleaned |>  filter(!is.na(neighborhood_income)), aes(x = neighborhood_
 
 ### Predictor (Categorical): Season Ticket Holder Status
 
-For categorical predictors, distinct group-level patterns are often evaluated to understand the baseline passion required to convert a casual follower into a dedicated ticket product investor.
+When segmenting the Saints fan base by Season Ticket Holder (STH) status, the data reveals that average passion scores are nearly identical across both groups (Figure 3).
 
-However, when segmenting the Saints fan base by Season Ticket Holder (STH) status, the data reveals that average passion scores are nearly identical across both groups (Figure 3).
-
-This indicates a highly ubiquitous and deeply entrenched fan base. Unlike markets where passion is heavily concentrated among in-stadium attendees, Saints fan affinity remains exceptionally high regardless of financial investment in tickets. For brand partners, this means sponsorship assets outside the stadium (e.g., broadcast, digital, and retail activations) carry just as much weight and reach a highly devoted audience.
+This indicates a highly ubiquitous and deeply entrenched fan base. Unlike markets where passion is heavily concentrated among in-stadium attendees, Saints fan affinity remains high regardless of financial investment in tickets.
 
 ```{r}
 #| label: sth-categorical-plot
@@ -159,7 +157,9 @@ ggplot(sth_summary, aes(x = avg_passion, y = reorder(sth_label, avg_passion))) +
 
 ### Predictor: In-Venue Attendance
 
-While baseline passion remains high across the overall fanbase, we also evaluated the impact of physical, in-venue engagement. By analyzing the total number of home games a fan attended during the season (`attend`), we can determine if repeated physical exposure to the team and its sponsors correlates with heightened team affinity.
+While baseline passion remains high across the overall fanbase, I also evaluated the impact of physical, in-venue engagement. By analyzing the total number of home games a fan attended during the season, we can determine if repeated physical exposure to the team and its sponsors correlates with heightened team affinity.
+
+While there is a small bump in passion scores as more gamea are attended, it seems like 6 games is the golden number to determine a fans passion.
 
 ```{r}
 #| label: attendance-progression-plot
@@ -180,6 +180,7 @@ attend_summary <- df_cleaned |>
     n_fans = n()
   ) |> 
   mutate(bar_label = paste0(round(avg_passion, 1), "\n(n=", n_fans, ")"))
+
 
 # Build the vertical column chart
 ggplot(attend_summary, aes(x = attend_grouped, y = avg_passion)) +
@@ -205,6 +206,8 @@ ggplot(attend_summary, aes(x = attend_grouped, y = avg_passion)) +
 ### Predictor: Neighborhood Family Density
 
 To further define the demographic profile of the fanbase, I analyzed life-stage indicators using U.S. Census Bureau ACS data. By calculating the percentage of households with children under 18 in each respondent's neighborhood, I tested if family-dense environments act as an incubator for team passion.
+
+There is a very slight increase in passion for more family-dense neighborhoods, though nearly negligible.
 
 ```{r}
 #| label: family-density-plot
@@ -240,6 +243,8 @@ ggplot(df_cleaned |> filter(!is.na(pct_kids)), aes(x = pct_kids, y = Passion_Sco
 
 To evaluate the impact of educational attainment, I analyzed the relationship between fan passion and the percentage of adults (age 25+) holding a Bachelor's degree or higher in the respondent's ZIP code.
 
+Fan's who reside in better educated neighborhoods have slightly less passion.
+
 ```{r}
 #| label: education-scatter-plot
 #| fig-cap: "Figure 6: Relationship between Neighborhood Education and Fan Passion"
@@ -252,7 +257,7 @@ cor_edu <- cor(df_cleaned$pct_college, df_cleaned$Passion_Score, use = "complete
 cor_label_edu <- paste0("Correlation (r) = ", round(cor_edu, 3))
 
 # Build the visual
-ggplot(df_cleaned %>% filter(!is.na(pct_college)), aes(x = pct_college, y = Passion_Score)) +
+ggplot(df_cleaned |>  filter(!is.na(pct_college)), aes(x = pct_college, y = Passion_Score)) +
   geom_jitter(color = "black", alpha = 0.3, size = 1.5) +
   geom_smooth(method = "lm", color = "#C2B067", linewidth = 1.5, se = TRUE) +
   # Format the X-axis as clean percentages
@@ -272,7 +277,9 @@ ggplot(df_cleaned %>% filter(!is.na(pct_college)), aes(x = pct_college, y = Pass
 
 #### Predictor: Neighborhood Education Tiers (ANOVA)
 
-While a continuous correlation provides directional insight, we applied an Analysis of Variance (ANOVA) to definitively test for statistical significance. We segmented the respondent ZIP codes into three equal tiers (tertiles) based on the density of college-educated adults to determine if neighborhood education level creates a proven variance in fan passion.
+While a continuous correlation provides directional insight, I applied an Analysis of Variance (ANOVA) to test for statistical significance. I segmented the respondent ZIP codes into three equal tiers based on the density of college-educated adults to determine if neighborhood education level creates a proven variance in fan passion.
+
+The analysis shows that fans from lower degree density neighborhood have statistically significantly higher passion score. For brands, this means that targeting efforts in lower degree-dense neighborhoods could be more impactful.
 
 ```{r}
 #| label: education-anova-plot
@@ -339,9 +346,9 @@ ggplot(edu_summary, aes(x = edu_label, y = avg_passion)) +
 
 ## Variable Importance Modeling
 
-While individual predictors provide excellent directional insight, audience demographics do not exist in a vacuum. To determine the true, independent drivers of fan affinity, we constructed a Multivariate Linear Regression model combining all major categorical and continuous variables.
+Taking these predictors, I put them in a Linear Regression Model to see their importance to the Passion score and attempt to see the connection between their external environment (neighborhood, attendance, income), and their internal passion for a team.
 
-By extracting the absolute t-statistics from the model, we can rank the relative "importance" of each variable in predicting a fan's Passion Score.
+By extracting the absolute t-statistics from the model, we can rank the relative importance of each variable in predicting a fan's Passion Score.
 
 ```{r}
 #| label: regression-table
@@ -407,7 +414,7 @@ tidy(final_model) |>
 
 ### Relative Variable Importance
 
-To make these findings highly actionable, we extracted the absolute t-statistics from the model to rank the relative "importance" of each variable. This allows us to see exactly which demographic or behavioral factor is the strongest independent driver of fan passion.
+I extracted the absolute t-statistics from the model to rank the relative importance of each variable. This allows us to see which demographic or behavioral factor is the strongest independent driver of fan passion.
 
 ```{r}
 #| label: importance-chart
@@ -456,7 +463,7 @@ ggplot(importance_df, aes(x = Importance, y = reorder(Clean_Term, Importance))) 
 
 ### Model Validation: Multicollinearity Check (VIF)
 
-To ensure the mathematical integrity of our linear regression model, we calculated the Variance Inflation Factor (VIF) for all predictors. High multicollinearity (VIF \> 5) can distort coefficient estimates and render a model highly unstable. As shown below, all variables fall safely below the critical threshold, confirming that our predictors are statistically independent.
+I calculated the Variance Inflation Factor for all predictors. High multicollinearity (VIF \> 5) can distort coefficient estimates and render a model highly unstable. As shown below, all variables fall safely below the critical threshold, confirming that our predictors are statistically independent.
 
 ```{r}
 #| label: vif-plot
@@ -511,9 +518,25 @@ ggplot(vif_df, aes(x = VIF, y = reorder(Clean_Term, VIF))) +
 
 ## Are Fans Financial Outliers?
 
-Relying strictly on ZIP code Census data introduces the risk of assuming an individual shares the exact median traits of their neighborhood. Fortunately, the original survey captured individual respondent income via a 7-point categorical bracket system: \* **1:** Under \$25k \* **2:** \$25k - \$49k \* **3:** \$50k - \$74k \* **4:** \$75k - \$99k \* **5:** \$100k - \$124k \* **6:** \$125k - \$149k \* **7:** \$150k or more
+As shown in @fig-income-passion-bivariate, the richer the neighborhood, the seemingly less passionate the fan is. However, relying strictly on ZIP code Census data introduces the risk of assuming an individual shares the exact median traits of their neighborhood. This is called the Ecological Fallacy. Fortunately, the original survey captured individual respondent income via a 7-point categorical bracket system:
 
-By categorizing the continuous Census neighborhood median income into these exact same 1-7 brackets, we can directly compare a fan's individual wealth against their neighbors to determine if Saints fans are financial outliers in their own communities.
+**1:** Under \$25k
+
+**2:** \$25k - \$49k
+
+**3:** \$50k - \$74k
+
+**4:** \$75k - \$99k
+
+**5:** \$100k - \$124k
+
+**6:** \$125k - \$149k
+
+**7:** \$150k or more
+
+By categorizing the continuous Census neighborhood median income into these exact same 1-7 brackets, I can directly compare a fan's individual wealth against their neighbors to determine if Saints fans are financial outliers in their own communities.
+
+As shown below, Saints far on average 2.4 brackets richer compared to their neighborhood meaning they often have more disposable income which follows the logic that sporting events are a treat.
 
 ```{r}
 #| label: income-outlier-analysis
@@ -594,14 +617,14 @@ ggplot(status_summary, aes(x = financial_status, y = pct, fill = financial_statu
 
 # Conclusion: The Saints Fan Persona
 
-Through a comprehensive synthesis of individual survey responses and granular U.S. Census data, this analysis reveals the demographic and behavioral profile of the New Orleans Saints fans.
+Through the analysis of individual survey responses and granular U.S. Census data, this analysis reveals the demographic and behavioral profile of the New Orleans Saints fans.
 
 ### Key Strategic Findings
 
-1.  **The Financial Outlier Phenomenon:** The most profound insight of this study resolves the Ecological Fallacy. While overall fan passion slightly declines in affluent, highly educated ZIP codes, the fans themselves are not low-income. The majority (69%) of the fanbase significantly out-earns their neighborhood median. The die-hard Saints fan possesses high disposable income but chooses to reside in culturally grounded, middle-to-working-class communities.
-2.  **Demographic Inelasticity:** Traditional life-stage metrics do not dictate fanaticism. The density of families with children in a neighborhood has virtually zero statistical bearing on passion. Fandom is a cultural constant that consumers do not age out of or grow into based on their household structure.
-3.  **The Primacy of the Superdome:** When controlling for all variables in our multivariate regression model, demographic traits pale in comparison to behavioral investment. In-stadium attendance and Season Ticket Holder status remain the most dominant, statistically significant drivers of elite fan affinity.
+1.  **The Financial Outlier Phenomenon:** The most profound insight of this study resolves the Ecological Fallacy. The majority (69%) of the fanbase significantly out-earns their neighborhood median. The die-hard Saints fan possesses high disposable income but chooses to reside in culturally grounded, middle-to-working-class communities. This could be useful in physical marketing campaigns for the team.
+2.  **Demographic Inelasticity:** Traditional life-stage metrics do not dictate fanaticism. The density of families with children in a neighborhood has virtually zero statistical bearing on passion. Fandom is a constant that consumers do not age out of or grow into based on their household structure.
+3.  **The Primacy of the in-person event:** When controlling for all variables in our multivariate regression model, demographic traits rule in comparison to behavioral investment. In-stadium attendance and Season Ticket Holder status remain some of the most dominant, statistically significant drivers of fan affinity. Though these are driven by the ability to purchase tickets through Income and Education.
 
-### Business Application for Corporate Partnerships
+## Further Research
 
-The data presents a highly lucrative, albeit untraditional, target audience. Saints fans have premium purchasing power, but because they are culturally anchored to working-class and middle-class neighborhoods, they are likely to reject luxury exclusivity. Corporate partnerships and marketing activations will see the highest return on investment by aligning with high-quality, authentic, and "everyday" consumer brands. These fans have the discretionary income to spend heavily, but they require messaging that reflects the grounded, communal culture of their neighborhoods.
+An area of research that could be done to aid the findings in this report (specifically the Ecological Fallacy) is to see if the same holds true in other cities. New Orleans has one of the highest poverty rates among major U.S cities, so the findings may be due to that rather than a pattern of fans residing in lower-income neighborhoods. If this finding holds true for other cities around the country, then there may be more to explore with this topic.
