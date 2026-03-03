@@ -25,7 +25,7 @@ This project was built entirely in **R** using **RStudio** and **Quarto**.
 Through Multivariate Linear Regression and categorical outlier analysis, the following key insights were discovered:
 
 **Insights:**
-* **The Financial Outlier Phenomenon:** By comparing individual responses to Census data, I resolved the "Ecological Fallacy" to discover that 69% of die-hard fans significantly out-earn their neighborhood median. 
+* **The Financial Outlier Phenomenon:** By comparing individual responses to Census data, I resolved the "Ecological Fallacy" to discover that 69% of fans significantly out-earn their neighborhood median. 
 * **Lucrative Target Audience:** Saints fans possess premium purchasing power but are culturally anchored to working-class and middle-class neighborhoods, meaning they respond best to authentic, "everyday" brand messaging rather than luxury exclusivity.
 * **Behavior over Demographics:** When controlling for all variables, in-stadium attendance and Season Ticket Holder status remained the most dominant, statistically significant drivers of elite fan affinity, far outweighing traditional life-stage metrics like having children.
 
